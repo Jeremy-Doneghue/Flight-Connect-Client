@@ -396,4 +396,4 @@ class AppConnection {
     }
 }
 
-// export default AppConnection;
+export default AppConnection;
