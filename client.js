@@ -10,7 +10,7 @@ class AppConnection {
             XPLANE_PORT: 9002,
             FC_PORT: 9003,
         }
-        let portToTry = connectionConfigs.FC_PORT;
+        let portToTry = connectionConfigs.XPLANE_PORT;
 
         if (ip === 'auto') {
             if (window.location.protocol === "file:") {
@@ -109,7 +109,7 @@ class AppConnection {
 
                                 const results = [];
                                 for (const key of subscriber.datarefs) {
-                                    let val = res.value[key] || this.state[key];
+                                    let val = (res.value[key] !== undefined) ? res.value[key] : this.state[key];
                                     if (val === undefined) {
                                         val = 0;
                                     }
@@ -189,6 +189,10 @@ class AppConnection {
     }
 
     setDataref(dataref, type, value) {
+        if (isNaN(value)) {
+            console.warn("Setting dataref, value must be a number, instead found: " + value);
+            return;
+        }
         this.sendMessage({
             id: this.identifier,
             command: "SET",
