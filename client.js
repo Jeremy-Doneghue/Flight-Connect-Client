@@ -10,7 +10,7 @@ class AppConnection {
             XPLANE_PORT: 9002,
             FC_PORT: 9003,
         }
-        let portToTry = connectionConfigs.FC_PORT;
+        let portToTry = connectionConfigs.XPLANE_PORT;
 
         if (ip === 'auto') {
             if (window.location.protocol === "file:") {
@@ -82,80 +82,79 @@ class AppConnection {
                 }
                 else {
                     switch (res.type) {
-                    case "RES": {
-                        // For each subscriber, check whether any of the requested datarefs have changed
-                        // If they have, call the function
-                        
-                        var subscriber;
-                        var changes = false;
-                        for (var i = 0; i < this.keySets.length; i++) {
-                            subscriber = this.keySets[i];
+                        case "RES": {
+                            // For each subscriber, check whether any of the requested datarefs have changed
+                            // If they have, call the function
 
-                            // Check for Ch-ch-ch-ch-changes
-                            changes = false;
-                            for (let key of subscriber.datarefs) {
-                                if (res.value[key] !== this.state[key] || res.value[key] !== undefined) {
-                                    changes = true;
-                                    break;
-                                }
-                            }
-                            if (changes) {
-                                // If the minimum time has elapsed
-                                if (subscriber.minDeltaTime !== 0) { 
-                                    if (now - subscriber.timeOfLast < subscriber.minDeltaTime * 1000) {
+                            var subscriber;
+                            var changes = false;
+                            for (var i = 0; i < this.keySets.length; i++) {
+                                subscriber = this.keySets[i];
+
+                                // Check for Ch-ch-ch-ch-changes
+                                changes = false;
+                                for (let key of subscriber.datarefs) {
+                                    if (res.value[key] !== this.state[key] || res.value[key] !== undefined) {
+                                        changes = true;
                                         break;
                                     }
                                 }
-
-                                const results = [];
-                                for (const key of subscriber.datarefs) {
-                                    let val = res.value[key] || this.state[key];
-                                    if (val === undefined) {
-                                        val = 0;
+                                if (changes) {
+                                    // If the minimum time has elapsed
+                                    if (subscriber.minDeltaTime !== 0) {
+                                        if (now - subscriber.timeOfLast < subscriber.minDeltaTime * 1000) {
+                                            break;
+                                        }
                                     }
-                                    results.push(val);
-                                }
-                                // Call it with the values
-                                subscriber.timeOfLast = now;
-                                subscriber.function.apply(subscriber.this, results);
-                            }
-                        }
-                        this.state = Object.assign(this.state, res.value);
-                        break;
-                    }
-                    case "COMMAND": {
-                        Object.values(this.commandCallbacks[res.value]).forEach(f => f());
-                        break;
-                    }
-                    case "ONCE": {
-                        this.drRequestCallbacks.shift()(res.value);
-                        break;
-                    }
-                    case "LOG": {
-                        console.warn(res.value);
-                        break;
-                    }
-                    case "CHNGCONN": {
-                        const newPort = res.value.port;
-                        const newHost = res.value.host;
-                        ip = newHost;
 
-                        if (typeof newPort !== 'undefined' && newPort != null &&
-                            typeof newHost !== 'undefined' && newHost != null)
-                        {
-                            console.info(`The instrument is now connecting to ws://${newHost}:${newPort}`);
-                            const newSock = new WebSocket(`ws://${newHost}:${newPort}`);
-                            addListeners(newSock);
-                            this.socket.close();
-                            this.identifier = null;
-                            this.commandCallbacks = {};
-                            this.socket = newSock;
+                                    const results = [];
+                                    for (const key of subscriber.datarefs) {
+                                        let val = (res.value[key] !== undefined) ? res.value[key] : this.state[key];
+                                        if (val === undefined) {
+                                            val = 0;
+                                        }
+                                        results.push(val);
+                                    }
+                                    // Call it with the values
+                                    subscriber.timeOfLast = now;
+                                    subscriber.function.apply(subscriber.this, results);
+                                }
+                            }
+                            this.state = Object.assign(this.state, res.value);
+                            break;
                         }
-                        break;
-                    }
-                    default:
-                        console.warn("Problem with response")
-                        break;
+                        case "COMMAND": {
+                            Object.values(this.commandCallbacks[res.value]).forEach(f => f());
+                            break;
+                        }
+                        case "ONCE": {
+                            this.drRequestCallbacks.shift()(res.value);
+                            break;
+                        }
+                        case "LOG": {
+                            console.warn(res.value);
+                            break;
+                        }
+                        case "CHNGCONN": {
+                            const newPort = res.value.port;
+                            const newHost = res.value.host;
+                            ip = newHost;
+
+                            if (typeof newPort !== 'undefined' && newPort != null &&
+                                typeof newHost !== 'undefined' && newHost != null) {
+                                console.info(`The instrument is now connecting to ws://${newHost}:${newPort}`);
+                                const newSock = new WebSocket(`ws://${newHost}:${newPort}`);
+                                addListeners(newSock);
+                                this.socket.close();
+                                this.identifier = null;
+                                this.commandCallbacks = {};
+                                this.socket = newSock;
+                            }
+                            break;
+                        }
+                        default:
+                            console.warn("Problem with response")
+                            break;
                     }
                 }
             };
@@ -165,21 +164,21 @@ class AppConnection {
             };
             sock.onclose = (event) => {
                 switch (event.code) {
-                case 1006:
-                    setTimeout(() => {
-                        console.log('Reconnecting...');
-                        portToTry = (portToTry === connectionConfigs.FC_PORT)
-                            ? connectionConfigs.XPLANE_PORT : connectionConfigs.FC_PORT;
+                    case 1006:
+                        setTimeout(() => {
+                            console.log('Reconnecting...');
+                            portToTry = (portToTry === connectionConfigs.FC_PORT)
+                                ? connectionConfigs.XPLANE_PORT : connectionConfigs.FC_PORT;
 
-                        _socket = new WebSocket(getURL(portToTry));
-                        this.firstResponse = true;
-                        this.identifier = null;
-                        addListeners(_socket);
-                        this.socket = _socket;
-                    }, 5000);
-                    break;
-                default:
-                    break;
+                            _socket = new WebSocket(getURL(portToTry));
+                            this.firstResponse = true;
+                            this.identifier = null;
+                            addListeners(_socket);
+                            this.socket = _socket;
+                        }, 5000);
+                        break;
+                    default:
+                        break;
                 }
             };
         }
@@ -189,12 +188,16 @@ class AppConnection {
     }
 
     setDataref(dataref, type, value) {
+        if (isNaN(value)) {
+            console.warn("Setting dataref, value must be a number, instead found: " + value);
+            return;
+        }
         this.sendMessage({
             id: this.identifier,
             command: "SET",
             dataref: dataref,
-	        data: String(value),
-	        type: type,
+            data: String(value),
+            type: type,
         });
     }
 
@@ -209,9 +212,9 @@ class AppConnection {
 
     setArrayDataref(dataref, type, array, offset) {
 
-        if (type==="INT") { type = "INT_ARRAY"; }
-        if (type==="FLOAT") { type = "FLOAT_ARRAY"; }
-        if (type !== "FLOAT_ARRAY" && type !== "INT_ARRAY") { throw "Type must be INT_ARRAY or FLOAT_ARRAY" }
+        if (type === "INT") { type = "INT_ARRAY"; }
+        if (type === "FLOAT") { type = "FLOAT_ARRAY"; }
+        if (type !== "FLOAT_ARRAY" && type !== "INT_ARRAY") { throw new Error("Type must be INT_ARRAY or FLOAT_ARRAY") }
 
         this.sendMessage({
             id: this.identifier,
@@ -239,7 +242,7 @@ class AppConnection {
         if (this.commandCallbacks.hasOwnProperty(command)) {
             this.commandCallbacks[command][cbid] = callback;
         } else {
-            this.commandCallbacks[command] = { [cbid]: callback };  
+            this.commandCallbacks[command] = { [cbid]: callback };
         }
 
         // Send subscribe message
@@ -313,12 +316,12 @@ class AppConnection {
 
     // From https://stackoverflow.com/a/2117523
     _uuidv4() {
-        return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-            (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+        return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+            (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16) // eslint-disable-line no-mixed-operators
         );
     }
 
-    datarefSubscribeWithPrecision({ func, minDeltaTime, precision, datarefs}) {
+    datarefSubscribeWithPrecision({ func, minDeltaTime, precision, datarefs }) {
         if (typeof minDeltaTime === 'undefined')
             minDeltaTime = 0;
 
@@ -396,4 +399,4 @@ class AppConnection {
     }
 }
 
-// export default AppConnection;
+export default AppConnection;
