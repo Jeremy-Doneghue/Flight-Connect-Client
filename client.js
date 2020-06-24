@@ -1,6 +1,8 @@
 // Jeremy Doneghue
 // iSim
 // Created on: 09-05-2019
+import WebSocket from 'ws';
+import crypto from 'crypto';
 
 class AppConnection {
 
@@ -12,14 +14,14 @@ class AppConnection {
         }
         let portToTry = connectionConfigs.XPLANE_PORT;
 
-        if (ip === 'auto') {
-            if (window.location.protocol === "file:") {
-                ip = 'localhost';
-            }
-            else if (window.location.protocol === "http:" || window.location.protocol === "https:") {
-                ip = window.location.hostname;
-            }
-        }
+        // if (ip === 'auto') {
+        //     if (window.location.protocol === "file:") {
+        //         ip = 'localhost';
+        //     }
+        //     else if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+        //         ip = window.location.hostname;
+        //     }
+        // }
 
         const getURL = (port) => {
             return `ws://${ip}:${port}`;
@@ -85,12 +87,10 @@ class AppConnection {
                         case "RES": {
                             // For each subscriber, check whether any of the requested datarefs have changed
                             // If they have, call the function
-
                             var subscriber;
                             var changes = false;
                             for (var i = 0; i < this.keySets.length; i++) {
                                 subscriber = this.keySets[i];
-
                                 // Check for Ch-ch-ch-ch-changes
                                 changes = false;
                                 for (let key of subscriber.datarefs) {
@@ -106,7 +106,6 @@ class AppConnection {
                                             break;
                                         }
                                     }
-
                                     const results = [];
                                     for (const key of subscriber.datarefs) {
                                         let val = (res.value[key] !== undefined) ? res.value[key] : this.state[key];
@@ -139,7 +138,6 @@ class AppConnection {
                             const newPort = res.value.port;
                             const newHost = res.value.host;
                             ip = newHost;
-
                             if (typeof newPort !== 'undefined' && newPort != null &&
                                 typeof newHost !== 'undefined' && newHost != null) {
                                 console.info(`The instrument is now connecting to ws://${newHost}:${newPort}`);
@@ -169,7 +167,6 @@ class AppConnection {
                             console.log('Reconnecting...');
                             portToTry = (portToTry === connectionConfigs.FC_PORT)
                                 ? connectionConfigs.XPLANE_PORT : connectionConfigs.FC_PORT;
-
                             _socket = new WebSocket(getURL(portToTry));
                             this.firstResponse = true;
                             this.identifier = null;
@@ -316,9 +313,14 @@ class AppConnection {
 
     // From https://stackoverflow.com/a/2117523
     _uuidv4() {
-        return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
-            (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16) // eslint-disable-line no-mixed-operators
-        );
+        return Math.floor(Math.random() * 97 * Math.random() * 89).toString(16);
+        // if (typeof window === 'undefined') {
+
+        // } else {
+        //     return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+        //         (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16) // eslint-disable-line no-mixed-operators
+        //     );
+        // }
     }
 
     datarefSubscribeWithPrecision({ func, minDeltaTime, precision, datarefs }) {
@@ -332,7 +334,7 @@ class AppConnection {
             datarefs: datarefs,
             name: uuid,
             "function": func,
-            "this": window,
+            "this": null,
         };
         this.keySets.push(res);
 
@@ -362,7 +364,7 @@ class AppConnection {
             datarefs: datarefs,
             name: uuid,
             "function": func,
-            "this": window,
+            "this": null,
         };
         this.keySets.push(res);
 
@@ -385,7 +387,7 @@ class AppConnection {
             this.socket.send(JSON.stringify(objectToSerialize));
         } catch {
             console.warn("Problem with socket, reloading page in 5s");
-            window.setTimeout(window.location.reload.bind(window.location), 5000);
+            // window.setTimeout(window.location.reload.bind(window.location), 5000);
         }
     }
 
@@ -400,3 +402,4 @@ class AppConnection {
 }
 
 export default AppConnection;
+// modules.default = { AppConnection }
